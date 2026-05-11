@@ -57,7 +57,7 @@ rfm-sql-project/
 
 ---
 
-## How to run
+## How to run 
 
 ### Option A — DuckDB CLI (recommended, zero setup)
 
