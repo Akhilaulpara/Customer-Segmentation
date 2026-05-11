@@ -154,7 +154,8 @@ The only changes needed for PostgreSQL:
 - **395 At-Risk customers generated £544K but are going cold** (avg 375 days since last purchase). A win-back campaign targeting those with `monetary > £1,000` could recover significant revenue at low cost.
 - **693 Potential Loyalists bought recently but only once or twice.** A 30-day onboarding email sequence or second-purchase incentive is the highest-leverage conversion play.
 - **882 Lost customers (15% of base) are likely unrecoverable** — average last purchase was 565 days ago. Consider sunsetting from active campaigns to reduce list cost.
-
+<img width="1759" height="888" alt="Image" src="https://github.com/user-attachments/assets/550abd5f-a61c-44ea-bd57-138dd5804dac" />
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/d4cf8d95-6304-4476-b2ce-97d94df7474e" />
 ---
 
 ## Segment marketing playbook
