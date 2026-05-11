@@ -17,7 +17,7 @@ This project answers that question entirely in SQL, using the **RFM framework** 
 | **M** onetary | How much have they spent in total? | Higher = better |
 
 Each dimension is scored 1–5 using `NTILE(5)`. The three scores are combined to assign every customer to one of six named segments, each with a clear marketing action.
-
+<img width="1878" height="999" alt="Image" src="https://github.com/user-attachments/assets/e19a7972-1dad-4963-9526-0ada439c8de1" />
 ---
 
 ## Dataset
