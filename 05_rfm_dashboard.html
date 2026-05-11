@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RFM Customer Segmentation — Online Retail II</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0b0c10; --surface: #13151c; --card: #1a1d27; --border: #252836;
+  --accent: #6c63ff; --accent2: #00d4a0; --accent3: #ff6b6b; --amber: #ffb347;
+  --text: #e8e9f0; --muted: #7b7e99; --dim: #404360;
+  --champions: #6c63ff; --loyal: #00d4a0; --potential: #5bc4f5;
+  --atrisk: #ffb347; --attention: #9c9ec8; --lost: #ff6b6b;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; }
+
+header {
+  padding: 56px 48px 40px; border-bottom: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+header::before {
+  content: ''; position: absolute; top: -120px; left: -80px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+header::after {
+  content: ''; position: absolute; top: -60px; right: 100px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(0,212,160,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-inner { max-width: 1200px; margin: 0 auto; position: relative; }
+.header-tag {
+  display: inline-block; font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent);
+  border: 1px solid rgba(108,99,255,0.35); padding: 4px 12px;
+  border-radius: 20px; margin-bottom: 18px;
+}
+h1 {
+  font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 48px);
+  font-weight: 800; line-height: 1.1; letter-spacing: -0.02em;
+  color: #fff; max-width: 700px;
+}
+h1 span { color: var(--accent); }
+.header-meta {
+  margin-top: 16px; display: flex; flex-wrap: wrap; gap: 24px;
+  font-size: 13px; color: var(--muted); font-family: 'DM Mono', monospace;
+}
+.header-meta strong { color: var(--accent2); }
+
+main { max-width: 1200px; margin: 0 auto; padding: 48px 48px 80px; }
+section { margin-bottom: 56px; }
+.section-label {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 48px; }
+.kpi {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 22px 20px; position: relative; overflow: hidden; transition: border-color 0.2s;
+}
+.kpi:hover { border-color: var(--dim); }
+.kpi-accent { position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 12px 0 0 12px; }
+.kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+.kpi-value { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+.card-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.card-sub { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+.seg-list { display: flex; flex-direction: column; gap: 14px; }
+.seg-row { display: flex; flex-direction: column; gap: 6px; }
+.seg-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.seg-name { font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.seg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.seg-pct { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+.bar-track { height: 6px; background: rgba(255,255,255,0.05); border-radius: 20px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 20px; }
+.seg-stats { display: flex; gap: 16px; font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.seg-stats span { white-space: nowrap; }
+
+.heatmap-wrap { overflow-x: auto; padding-bottom: 8px; }
+.heatmap { display: grid; grid-template-columns: 32px repeat(5, 1fr); gap: 4px; min-width: 340px; }
+.hm-cell {
+  aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-size: 11px;
+  font-family: 'DM Mono', monospace; transition: transform 0.15s; cursor: default;
+}
+.hm-cell:hover { transform: scale(1.1); z-index: 2; position: relative; }
+.hm-count { font-size: 13px; font-weight: 500; }
+.hm-axis-label { display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.hm-corner { display: flex; align-items: flex-end; justify-content: flex-end; padding-bottom: 4px; }
+.hm-header { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; text-align: center; padding-bottom: 4px; }
+.axis-title { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; margin-bottom: 8px; }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; padding: 0 16px 12px 0; border-bottom: 1px solid var(--border); }
+tbody td { padding: 12px 16px 12px 0; border-bottom: 1px solid rgba(37,40,54,0.6); color: var(--text); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+.score-pill { display: inline-flex; gap: 3px; font-family: 'DM Mono', monospace; font-size: 11px; }
+.score-box { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; }
+.num { font-family: 'DM Mono', monospace; }
+
+.action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.action-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px; position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.action-card:hover { border-color: var(--dim); transform: translateY(-2px); }
+.action-icon { font-size: 24px; margin-bottom: 10px; }
+.action-seg { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.action-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.action-tags { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.action-tag { font-size: 10px; font-family: 'DM Mono', monospace; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--muted); letter-spacing: 0.04em; }
+
+.sql-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.sql-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+.sql-fn { font-family: 'DM Mono', monospace; font-size: 13px; margin-bottom: 8px; }
+.sql-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.fade-up { animation: fadeUp 0.6s ease both; }
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+
+footer { border-top: 1px solid var(--border); padding: 32px 48px; text-align: center; font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+footer a { color: var(--accent); text-decoration: none; }
+@media (max-width: 768px) {
+  header, main, footer { padding-left: 20px; padding-right: 20px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner fade-up">
+    <div class="header-tag">SQL Portfolio Project</div>
+    <h1>RFM Customer<br/><span>Segmentation</span> Analysis</h1>
+    <div class="header-meta">
+      <span>Dataset: <strong>Online Retail II (UCI)</strong></span>
+      <span>Period: <strong>Dec 2009 – Dec 2011</strong></span>
+      <span>Engine: <strong>DuckDB SQL</strong></span>
+      <span>Customers analysed: <strong>5,878</strong></span>
+      <span>Total revenue: <strong>£17.7M</strong></span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPIs -->
+  <section class="fade-up delay-1">
+    <div class="section-label">Key metrics</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-accent" style="background:var(--accent)"></div><div class="kpi-label">Total customers</div><div class="kpi-value">5,878</div><div class="kpi-sub">Post-clean, identified only</div></div>
+      <div class="kpi"><div class="kpi-accent" style="background:var(--accent2)"></div><div class="kpi-label">Total revenue</div><div class="kpi-value">£17.7M</div><div class="kpi-sub">Across 2 years of transactions</div></div>
+      <div class="kpi"><div class="kpi-accent" style="background:var(--champions)"></div><div class="kpi-label">Champions</div><div class="kpi-value">1,299</div><div class="kpi-sub">Drive 68.3% of total revenue</div></div>
+      <div class="kpi"><div class="kpi-accent" style="background:var(--amber)"></div><div class="kpi-label">At-risk customers</div><div class="kpi-value">395</div><div class="kpi-sub">Avg £1,378 LTV · going cold</div></div>
+      <div class="kpi"><div class="kpi-accent" style="background:var(--lost)"></div><div class="kpi-label">Lost customers</div><div class="kpi-value">882</div><div class="kpi-sub">Avg 565 days since last buy</div></div>
+      <div class="kpi"><div class="kpi-accent" style="background:var(--potential)"></div><div class="kpi-label">Champion avg LTV</div><div class="kpi-value">£9,327</div><div class="kpi-sub">vs £424 for Lost segment</div></div>
+    </div>
+  </section>
+
+  <!-- SEGMENT BREAKDOWN -->
+  <section class="fade-up delay-2">
+    <div class="section-label">Segment breakdown</div>
+    <div class="grid-2" style="align-items:start;">
+      <div class="card">
+        <div class="card-title">Revenue share by segment</div>
+        <div class="card-sub">Ranked by composite RFM score (1–5)</div>
+        <div class="seg-list" id="segBars"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Customer distribution</div>
+        <div class="card-sub">% of 5,878 total customers</div>
+        <div style="height:260px; display:flex; align-items:center; justify-content:center;">
+          <canvas id="donutChart" role="img" aria-label="Donut chart showing customer distribution: Needs Attention 33.6%, Champions 22.1%, Lost 15%, Potential Loyalists 11.8%, Loyal Customers 10.8%, At Risk 6.7%.">Needs Attention 33.6%, Champions 22.1%, Lost 15.0%, Potential Loyalists 11.8%, Loyal Customers 10.8%, At Risk 6.7%.</canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MONTHLY REVENUE -->
+  <section class="fade-up delay-2">
+    <div class="section-label">Revenue trend</div>
+    <div class="card">
+      <div class="card-title">Monthly revenue — Dec 2009 to Dec 2011</div>
+      <div class="card-sub">Consistent Q4 seasonality peak each year (Oct–Nov surge)</div>
+      <div style="position:relative; height:240px; margin-top:8px;">
+        <canvas id="monthlyChart" role="img" aria-label="Line chart of monthly revenue showing seasonal peaks in Oct-Nov each year, reaching £1.17M in Nov 2010 and £1.16M in Nov 2011.">Monthly peaks: Nov 2010 £1.17M, Nov 2011 £1.16M.</canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- RFM SCORES + HEATMAP -->
+  <section class="fade-up delay-3">
+    <div class="section-label">RFM score analysis</div>
+    <div class="grid-2" style="align-items:start;">
+      <div class="card">
+        <div class="card-title">Avg R, F, M scores by segment</div>
+        <div class="card-sub">Scored 1–5 via NTILE(5) · 5 = best</div>
+        <div style="position:relative; height:260px;">
+          <canvas id="rfmBar" role="img" aria-label="Grouped bar chart comparing R, F, M NTILE scores per segment. Champions lead all three.">Champions: R 4.4, F 4.5, M 4.5. Lost: R 1.0, F 1.5, M 1.5.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">R × F customer count heatmap</div>
+        <div class="card-sub">Each cell = number of customers at that R×F intersection</div>
+        <div class="axis-title" style="margin-top:8px;">← Frequency score (1 to 5) →</div>
+        <div class="heatmap-wrap"><div class="heatmap" id="heatmap"></div></div>
+        <div style="text-align:center; margin-top:8px; font-size:10px; color:var(--muted); font-family:'DM Mono',monospace;">↑ Recency score (1 to 5) ↑</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FULL TABLE -->
+  <section class="fade-up delay-3">
+    <div class="section-label">Segment detail table</div>
+    <div class="card">
+      <div class="card-title">All segments — complete metrics</div>
+      <div class="card-sub">Sorted by composite RFM score descending · R/F/M boxes coloured by score (red=1, green=5)</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Segment</th><th>Customers</th><th>% Base</th>
+            <th>Avg recency</th><th>Avg orders</th><th>Avg value £</th>
+            <th>Total revenue</th><th>Rev %</th><th>R / F / M</th>
+          </tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARKETING PLAYBOOK -->
+  <section class="fade-up delay-4">
+    <div class="section-label">Marketing playbook</div>
+    <div class="action-grid" id="actionCards"></div>
+  </section>
+
+  <!-- SQL CONCEPTS -->
+  <section class="fade-up delay-4">
+    <div class="section-label">SQL concepts showcased</div>
+    <div class="sql-grid">
+      <div class="sql-card"><div class="sql-fn" style="color:var(--accent);">NTILE(5) OVER (...)</div><div class="sql-desc">Divides customers into 5 equal quantile buckets per dimension — no hard-coded thresholds, adapts to any data distribution.</div></div>
+      <div class="sql-card"><div class="sql-fn" style="color:var(--accent);">Chained CTEs</div><div class="sql-desc">Five sequential CTEs: cleaned → order_summary → rfm_raw → rfm_scored → rfm_segments. Each step independently auditable.</div></div>
+      <div class="sql-card"><div class="sql-fn" style="color:var(--accent);">DATE_DIFF()</div><div class="sql-desc">Recency anchored to MAX(date) + 1 day so scores are reproducible regardless of when the query runs.</div></div>
+      <div class="sql-card"><div class="sql-fn" style="color:var(--accent2);">SUM() OVER ()</div><div class="sql-desc">Window aggregation for % of revenue computed inline across all segments — no self-join or correlated subquery needed.</div></div>
+      <div class="sql-card"><div class="sql-fn" style="color:var(--accent2);">COUNT(DISTINCT)</div><div class="sql-desc">Frequency counts distinct invoices after collapsing line items — prevents multi-item baskets from inflating order counts.</div></div>
+      <div class="sql-card"><div class="sql-fn" style="color:var(--accent2);">CASE WHEN (ordered)</div><div class="sql-desc">First-match ordered CASE logic ensures mutually exclusive segment assignment across all 6 business segments.</div></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Built with DuckDB SQL &nbsp;·&nbsp; Dataset: UCI Online Retail II &nbsp;·&nbsp;
+  RFM Segmentation — SQL Portfolio Project
+</footer>
+
+<script>
+const SEGMENTS = [
+  { name:'Champions',           color:'#6c63ff', customers:1299, pct_c:22.1, recency:20.6,  orders:17.1, avgVal:9327,  totalRev:12.12, pct_r:68.3, score:4.63, r:4.4, f:4.5, m:4.5 },
+  { name:'Loyal Customers',     color:'#00d4a0', customers:635,  pct_c:10.8, recency:181.6, orders:9.3,  avgVal:4211,  totalRev:2.67,  pct_r:15.1, score:3.81, r:2.7, f:4.5, m:4.3 },
+  { name:'Potential Loyalists', color:'#5bc4f5', customers:693,  pct_c:11.8, recency:23.4,  orders:2.6,  avgVal:1136,  totalRev:0.79,  pct_r:4.4,  score:3.24, r:4.4, f:2.6, m:2.8 },
+  { name:'At Risk',             color:'#ffb347', customers:395,  pct_c:6.7,  recency:374.9, orders:3.7,  avgVal:1378,  totalRev:0.54,  pct_r:3.1,  score:2.72, r:1.8, f:3.2, m:3.2 },
+  { name:'Needs Attention',     color:'#9c9ec8', customers:1974, pct_c:33.6, recency:193.6, orders:2.4,  avgVal:632,   totalRev:1.25,  pct_r:7.0,  score:2.41, r:2.5, f:2.4, m:2.4 },
+  { name:'Lost',                color:'#ff6b6b', customers:882,  pct_c:15.0, recency:564.6, orders:1.2,  avgVal:424,   totalRev:0.37,  pct_r:2.1,  score:1.27, r:1.0, f:1.5, m:1.5 },
+];
+
+const MONTHLY = [
+  ['Dec 09',686654],['Jan 10',557319],['Feb 10',506371],['Mar 10',699609],
+  ['Apr 10',594609],['May 10',599986],['Jun 10',639067],['Jul 10',591637],
+  ['Aug 10',604243],['Sep 10',831615],['Oct 10',1036680],['Nov 10',1172336],
+  ['Dec 10',884592],['Jan 11',569445],['Feb 11',447137],['Mar 11',595501],
+  ['Apr 11',469200],['May 11',678595],['Jun 11',661214],['Jul 11',600091],
+  ['Aug 11',645344],['Sep 11',952838],['Oct 11',1039319],['Nov 11',1161817],
+  ['Dec 11',518211],
+];
+
+const HEATMAP = {
+  '5-1':29,'5-2':135,'5-3':198,'5-4':249,'5-5':564,
+  '4-1':140,'4-2':121,'4-3':239,'4-4':339,'4-5':336,
+  '3-1':245,'3-2':110,'3-3':280,'3-4':340,'3-5':201,
+  '2-1':46,'2-2':644,'2-3':234,'2-4':197,'2-5':55,
+  '1-1':716,'1-2':166,'1-3':225,'1-4':50,'1-5':19,
+};
+
+const ACTIONS = [
+  { seg:'Champions', color:'#6c63ff', icon:'👑', desc:'Reward with VIP perks and exclusive early access. Invite into referral or brand ambassador programmes.', tags:['loyalty rewards','early access','referral'] },
+  { seg:'Loyal Customers', color:'#00d4a0', icon:'⭐', desc:'Enroll in a tiered loyalty programme. Offer birthday discounts and subscription nudges.', tags:['loyalty points','subscription','birthday offer'] },
+  { seg:'Potential Loyalists', color:'#5bc4f5', icon:'🌱', desc:'Send a 30-day onboarding series. A second-purchase discount (10–15%) converts this cohort effectively.', tags:['welcome series','2nd purchase','onboarding'] },
+  { seg:'At Risk', color:'#ffb347', icon:'⚠️', desc:'Launch a win-back campaign. Prioritise £1,000+ customers — time-limited offer with urgency.', tags:['win-back','time-limited','re-engagement'] },
+  { seg:'Needs Attention', color:'#9c9ec8', icon:'🔔', desc:'Send a re-engagement survey and personalised product recommendations based on past purchases.', tags:['survey','recommendation','re-engagement'] },
+  { seg:'Lost', color:'#ff6b6b', icon:'💤', desc:'Sunset from active campaigns or try a final last-chance email. Remove from paid audiences to cut cost.', tags:['sunset','last chance','list hygiene'] },
+];
+
+const scoreColors = ['#ff6b6b','#ff9966','#9c9ec8','#5bc4f5','#00d4a0'];
+
+// Segment bars
+const barsEl = document.getElementById('segBars');
+SEGMENTS.forEach(s => {
+  barsEl.innerHTML += `
+  <div class="seg-row">
+    <div class="seg-top">
+      <div class="seg-name"><span class="seg-dot" style="background:${s.color}"></span>${s.name}</div>
+      <span class="seg-pct">${s.pct_r}% of revenue</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" style="width:${s.pct_r}%;background:${s.color}"></div></div>
+    <div class="seg-stats"><span>${s.customers.toLocaleString()} customers</span><span>Avg £${s.avgVal.toLocaleString()}</span><span>Recency ${s.recency}d</span></div>
+  </div>`;
+});
+
+// Donut
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: SEGMENTS.map(s => s.name),
+    datasets: [{ data: SEGMENTS.map(s => s.pct_c), backgroundColor: SEGMENTS.map(s => s.color), borderColor: '#1a1d27', borderWidth: 3 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '68%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` }, backgroundColor:'#252836', titleColor:'#fff', bodyColor:'#9c9ec8', borderColor:'#404360', borderWidth:1 }
+    }
+  }
+});
+
+// Monthly line
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'line',
+  data: {
+    labels: MONTHLY.map(m=>m[0]),
+    datasets: [{
+      label: 'Revenue (£)', data: MONTHLY.map(m=>m[1]),
+      borderColor:'#6c63ff', backgroundColor:'rgba(108,99,255,0.08)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#6c63ff',
+      fill:true, tension:0.35
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins: { legend:{display:false}, tooltip:{ callbacks:{label:ctx=>' £'+ctx.parsed.y.toLocaleString()}, backgroundColor:'#252836', titleColor:'#fff', bodyColor:'#9c9ec8', borderColor:'#404360', borderWidth:1 } },
+    scales: {
+      x: { ticks:{color:'#7b7e99',font:{size:10,family:'DM Mono'},maxRotation:45,autoSkip:true,maxTicksLimit:13}, grid:{color:'rgba(255,255,255,0.04)'} },
+      y: { ticks:{color:'#7b7e99',font:{size:10,family:'DM Mono'},callback:v=>'£'+(v/1000).toFixed(0)+'k'}, grid:{color:'rgba(255,255,255,0.04)'} }
+    }
+  }
+});
+
+// RFM grouped bar
+new Chart(document.getElementById('rfmBar'), {
+  type: 'bar',
+  data: {
+    labels: SEGMENTS.map(s => s.name.split(' ').slice(0,2).join(' ')),
+    datasets: [
+      { label:'R score', data:SEGMENTS.map(s=>s.r), backgroundColor:'rgba(108,99,255,0.85)', borderRadius:4 },
+      { label:'F score', data:SEGMENTS.map(s=>s.f), backgroundColor:'rgba(0,212,160,0.85)', borderRadius:4 },
+      { label:'M score', data:SEGMENTS.map(s=>s.m), backgroundColor:'rgba(91,196,245,0.85)', borderRadius:4 },
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins: {
+      legend: { display:true, position:'top', labels:{color:'#7b7e99',font:{size:11,family:'DM Mono'},boxWidth:10,padding:16} },
+      tooltip: { backgroundColor:'#252836', titleColor:'#fff', bodyColor:'#9c9ec8', borderColor:'#404360', borderWidth:1 }
+    },
+    scales: {
+      x: { ticks:{color:'#7b7e99',font:{size:10},maxRotation:30}, grid:{display:false} },
+      y: { min:0, max:5, ticks:{stepSize:1,color:'#7b7e99',font:{size:10,family:'DM Mono'}}, grid:{color:'rgba(255,255,255,0.04)'} }
+    }
+  }
+});
+
+// Heatmap
+const hm = document.getElementById('heatmap');
+const maxVal = Math.max(...Object.values(HEATMAP));
+hm.innerHTML += `<div class="hm-corner" style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;align-items:flex-end;display:flex;justify-content:flex-end;">R↓ F→</div>`;
+for(let f=1;f<=5;f++) hm.innerHTML += `<div class="hm-header">F${f}</div>`;
+for(let r=5;r>=1;r--) {
+  hm.innerHTML += `<div class="hm-axis-label">R${r}</div>`;
+  for(let f=1;f<=5;f++) {
+    const v = HEATMAP[`${r}-${f}`]||0;
+    const intensity = v/maxVal;
+    const alpha = 0.08 + intensity * 0.88;
+    const col = r>=4&&f>=4 ? `rgba(108,99,255,${alpha})` : r<=2&&f<=2 ? `rgba(255,107,107,${alpha})` : `rgba(91,196,245,${alpha})`;
+    const tc = intensity>0.5 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
+    hm.innerHTML += `<div class="hm-cell" style="background:${col};color:${tc};" title="R${r} × F${f}: ${v} customers"><span class="hm-count">${v}</span></div>`;
+  }
+}
+
+// Table
+const tbody = document.getElementById('tableBody');
+SEGMENTS.forEach(s => {
+  const box = v => `<div class="score-box" style="background:${scoreColors[Math.round(v)-1]}22;color:${scoreColors[Math.round(v)-1]};">${v.toFixed(1)}</div>`;
+  tbody.innerHTML += `<tr>
+    <td><span class="badge" style="background:${s.color}22;color:${s.color};">${s.name}</span></td>
+    <td class="num">${s.customers.toLocaleString()}</td>
+    <td class="num">${s.pct_c}%</td>
+    <td class="num">${s.recency}d</td>
+    <td class="num">${s.orders}</td>
+    <td class="num">£${s.avgVal.toLocaleString()}</td>
+    <td class="num">£${s.totalRev.toFixed(2)}M</td>
+    <td class="num">${s.pct_r}%</td>
+    <td><div class="score-pill">${box(s.r)}${box(s.f)}${box(s.m)}</div></td>
+  </tr>`;
+});
+
+// Action cards
+ACTIONS.forEach(a => {
+  document.getElementById('actionCards').innerHTML += `
+  <div class="action-card">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;border-radius:14px 14px 0 0;background:${a.color};"></div>
+    <div class="action-icon">${a.icon}</div>
+    <div class="action-seg" style="color:${a.color};">${a.seg}</div>
+    <div class="action-desc">${a.desc}</div>
+    <div class="action-tags">${a.tags.map(t=>`<span class="action-tag">${t}</span>`).join('')}</div>
+  </div>`;
+});
+</script>
+</body>
+</html>
